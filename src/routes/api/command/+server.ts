@@ -27,20 +27,7 @@ type Message = {
 	role: 'user' | 'assistant' | 'system';
 	content: string;
 };
-const history: Message[] = [
-	{
-		role: 'system',
-		content: `\
-When responding ALWAYS make the first line reflect the most appropriate mode for your response,
-one of ${emotionalModels.join(', ')}.
-
-<OUTPUT_FORMAT>
-MODE: <mode>
-
-response text
-</OUTPUT_FORMAT>`
-	}
-];
+const history: Message[] = [];
 
 const openaiClient = new OpenAI({
 	apiKey: OPENAI_API_KEY
@@ -51,7 +38,23 @@ const useOperant = true;
 async function callLLM(prompt: string): Promise<string> {
 	history.push({ role: 'user', content: prompt });
 	const completion = await openaiClient.chat.completions.create({
-		messages: history,
+		messages: [
+			{
+				role: 'system',
+				content: `\
+		When responding ALWAYS make the first line reflect the most appropriate mode for your response,
+		one of ${emotionalModels.join(', ')}.
+		
+		When user asks to play a song you made set response text to "play-song" (mode should still be one of the above).
+		
+		<OUTPUT_FORMAT>
+		MODE: <mode>
+		
+		response text
+		</OUTPUT_FORMAT>`
+			},
+			...history
+		],
 		model: 'gpt-4.1',
 		store: true
 	});
@@ -86,7 +89,7 @@ const EmotionalModeSchema = z.enum([
 	'clarifying',
 	'summarizing'
 ]);
-type EmotionalMode = z.infer<typeof EmotionalModeSchema>;
+type Mode = z.infer<typeof EmotionalModeSchema>;
 
 export const POST = (async ({ request }) => {
 	const formData = await request.formData();
@@ -131,15 +134,24 @@ export const POST = (async ({ request }) => {
 			return json({ status: 'error', message: 'empty prompt' });
 		}
 		const llmResponseText = await callLLM(prompt);
+		console.log({ llmResponseText });
 		const match = llmResponseText.match(/^MODE:\s*(\w+)\s*\n\n([\s\S]*)/);
 		if (!match) {
 			return json({ status: 'error', message: 'Invalid response format from LLM' });
 		}
-		const mode = match[1] as EmotionalMode;
+		const mode = match[1] as Mode;
 		const speechText = match[2];
-		const audioBuffer = await callTTS(speechText);
-		const audioBase64 = Buffer.from(audioBuffer).toString('base64');
-		return json({ status: 'ok', audioBase64, mode });
+		if (speechText.trim() === 'play-song' || speechText.toLowerCase().includes('play-song')) {
+			return json({
+				status: 'ok',
+				mode,
+				playSong: 'https://pixtoon-media.eviworld.com/songs/weekend-song.mp3'
+			});
+		} else {
+			const audioBuffer = await callTTS(speechText);
+			const audioBase64 = Buffer.from(audioBuffer).toString('base64');
+			return json({ status: 'ok', audioBase64, mode });
+		}
 	} catch (error) {
 		console.error('Error during transcription:', error);
 		return json(

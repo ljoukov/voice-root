@@ -175,6 +175,7 @@
 			audioElement.currentTime = 0;
 			if (audioUrl) {
 				URL.revokeObjectURL(audioUrl);
+				audioUrl = undefined;
 			}
 		}
 
@@ -207,8 +208,9 @@
 				}),
 				z.object({
 					status: z.literal('ok'),
-					audioBase64: z.string(),
-					mode: emotionalModeSchema
+					audioBase64: z.string().optional(),
+					mode: emotionalModeSchema,
+					playSong: z.string().optional()
 				})
 			]);
 
@@ -220,15 +222,19 @@
 			if (parsed.data.status === 'ok') {
 				emotionalMode = parsed.data.mode;
 				console.log({ emotionalMode });
-				const audioBase64 = parsed.data.audioBase64;
-				const arrayBuffer = Uint8Array.from(atob(audioBase64), (c) => c.charCodeAt(0)).buffer;
-				// Create a blob from the array buffer
-				const responseBlob = new Blob([arrayBuffer], { type: 'audio/mp3' });
-				// Create an object URL for the blob
-				audioUrl = URL.createObjectURL(responseBlob);
+				const { audioBase64, playSong } = parsed.data;
+				if (audioBase64) {
+					const arrayBuffer = Uint8Array.from(atob(audioBase64), (c) => c.charCodeAt(0)).buffer;
+					// Create a blob from the array buffer
+					const responseBlob = new Blob([arrayBuffer], { type: 'audio/mp3' });
+					// Create an object URL for the blob
+					audioUrl = URL.createObjectURL(responseBlob);
+					audioElement.src = audioUrl;
+				} else if (playSong) {
+					audioElement.src = playSong;
+				}
 
 				// Set the audio source and play
-				audioElement.src = audioUrl;
 				try {
 					await audioElement.play();
 				} catch (error) {
@@ -237,7 +243,10 @@
 
 				// Clean up the object URL after playback
 				audioElement.onended = () => {
-					URL.revokeObjectURL(audioUrl);
+					if (audioUrl) {
+						URL.revokeObjectURL(audioUrl);
+						audioUrl = undefined;
+					}
 				};
 			}
 
@@ -512,7 +521,7 @@
 	</div>
 
 	<!-- Debug controls -->
-	<div class="absolute bottom-8 left-1/2 -translate-x-1/2 transform">
+	<div class="absolute bottom-8 left-1/2 hidden -translate-x-1/2 transform">
 		<div class="bg-opacity-20 rounded-2xl bg-black p-4 backdrop-blur-sm">
 			<p class="mb-3 text-center text-sm text-white opacity-80">Debug Controls</p>
 			<div class="flex max-w-md flex-wrap justify-center gap-2">
