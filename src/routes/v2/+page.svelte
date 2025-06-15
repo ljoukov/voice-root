@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { z } from 'zod';
 	import { Mic } from 'lucide-svelte';
 
 	type EmotionalMode =
@@ -186,25 +187,47 @@
 				body: formData
 			});
 
+			const json = await response.json();
+
+			const responseSchema = z.union([
+				z.object({
+					status: z.literal('error'),
+					message: z.string()
+				}),
+				z.object({
+					status: z.literal('ok'),
+					audioBase64: z.string()
+				})
+			]);
+
+			const parsed = responseSchema.safeParse(json);
+			if (!parsed.success) {
+				console.error('Invalid response from server', parsed.error);
+				return;
+			}
+			if (parsed.data.status === 'ok') {
+				const audioBase64 = parsed.data.audioBase64;
+				const arrayBuffer = Uint8Array.from(atob(audioBase64), (c) => c.charCodeAt(0)).buffer;
+				// Create a blob from the array buffer
+				const responseBlob = new Blob([arrayBuffer], { type: 'audio/mp3' });
+				// Create an object URL for the blob
+				const audioUrl = URL.createObjectURL(responseBlob);
+
+				// Set the audio source and play
+				audioElement.src = audioUrl;
+				try {
+					await audioElement.play();
+				} catch (error) {
+					console.error('Error playing audio:', error);
+				}
+
+				// Clean up the object URL after playback
+				audioElement.onended = () => {
+					URL.revokeObjectURL(audioUrl);
+				};
+			}
+
 			// // Get the response as an array buffer
-			// const arrayBuffer = await response.arrayBuffer();
-			// // Create a blob from the array buffer
-			// const responseBlob = new Blob([arrayBuffer], { type: 'audio/mp3' });
-			// // Create an object URL for the blob
-			// const audioUrl = URL.createObjectURL(responseBlob);
-
-			// // Set the audio source and play
-			// audioElement.src = audioUrl;
-			// try {
-			// 	await audioElement.play();
-			// } catch (error) {
-			// 	console.error('Error playing audio:', error);
-			// }
-
-			// // Clean up the object URL after playback
-			// audioElement.onended = () => {
-			// 	URL.revokeObjectURL(audioUrl);
-			// };
 		};
 		mediaRecorder.start();
 		isRecording = true;
