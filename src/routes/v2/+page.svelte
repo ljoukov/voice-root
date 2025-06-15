@@ -148,9 +148,73 @@
 
 	$: animationStyle = `animation: ${currentMode.animation} ${animationDurations[currentMode.animation]} ease-in-out infinite`;
 
-	function handleButtonPress() {
+	function onMouseDown() {
 		isPressed = true;
+		console.log('onMouseDown');
+		startRecording();
+	}
+
+	function onMouseUp() {
+		console.log('onMouseUp');
 		setTimeout(() => (isPressed = false), 150);
+		stopRecording();
+	}
+
+	let mediaRecorder: MediaRecorder | null = null;
+	let audioChunks: Blob[] = [];
+	let isRecording = false;
+	let audioElement: HTMLAudioElement;
+
+	async function startRecording() {
+		const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+		mediaRecorder = new MediaRecorder(stream);
+		audioChunks = [];
+		mediaRecorder.ondataavailable = (event) => {
+			if (event.data.size > 0) {
+				audioChunks.push(event.data);
+			}
+		};
+		mediaRecorder.onstop = async () => {
+			const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+			console.log('Bytes recorded:', audioBlob.size);
+
+			const formData = new FormData();
+			formData.append('audio', audioBlob);
+
+			const response = await fetch('/api/command', {
+				method: 'POST',
+				body: formData
+			});
+
+			// // Get the response as an array buffer
+			// const arrayBuffer = await response.arrayBuffer();
+			// // Create a blob from the array buffer
+			// const responseBlob = new Blob([arrayBuffer], { type: 'audio/mp3' });
+			// // Create an object URL for the blob
+			// const audioUrl = URL.createObjectURL(responseBlob);
+
+			// // Set the audio source and play
+			// audioElement.src = audioUrl;
+			// try {
+			// 	await audioElement.play();
+			// } catch (error) {
+			// 	console.error('Error playing audio:', error);
+			// }
+
+			// // Clean up the object URL after playback
+			// audioElement.onended = () => {
+			// 	URL.revokeObjectURL(audioUrl);
+			// };
+		};
+		mediaRecorder.start();
+		isRecording = true;
+	}
+
+	function stopRecording() {
+		if (mediaRecorder && isRecording) {
+			mediaRecorder.stop();
+			isRecording = false;
+		}
 	}
 </script>
 
@@ -337,11 +401,11 @@
 </svelte:head>
 
 <div
-	class="min-h-screen w-full flex flex-col items-center justify-center relative overflow-hidden transition-all duration-1000 ease-in-out"
+	class="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden transition-all duration-1000 ease-in-out"
 	style="background: {currentMode.background}; background-size: 200% 200%; animation: backgroundFlow 8s ease-in-out infinite"
 >
 	<!-- Ambient background particles -->
-	<div class="absolute inset-0 overflow-hidden pointer-events-none">
+	<div class="pointer-events-none absolute inset-0 overflow-hidden">
 		{#each Array(20) as _, i}
 			<div
 				class="absolute rounded-full opacity-20"
@@ -359,7 +423,7 @@
 		<!-- Pulse rings -->
 		{#each Array(3) as _, i}
 			<div
-				class="absolute rounded-full border-2 pointer-events-none"
+				class="pointer-events-none absolute rounded-full border-2"
 				style="width: {280 + i * 40}px; height: {280 + i * 40}px;
                border-color: {currentMode.pulseColor}; opacity: {0.3 - i * 0.1};
                animation: pulseRipple {3 + i}s ease-out infinite {i * 0.5}s"
@@ -368,13 +432,14 @@
 
 		<!-- Main button -->
 		<button
-			class="relative w-64 h-64 rounded-full shadow-2xl transition-all duration-300 ease-out transform
-             {isPressed ? 'scale-95' : 'scale-100'} hover:scale-105 active:scale-95
-             focus:outline-none focus:ring-4 focus:ring-white focus:ring-opacity-50"
+			class="relative h-64 w-64 transform rounded-full shadow-2xl transition-all duration-300 ease-out
+             {isPressed ? 'scale-95' : 'scale-100'} focus:ring-opacity-50 hover:scale-105
+             focus:ring-4 focus:ring-white focus:outline-none active:scale-95"
 			style="background-color: {currentMode.buttonColor};
              box-shadow: 0 20px 40px rgba(0,0,0,0.2), 0 0 40px {currentMode.pulseColor}40;
              {animationStyle}"
-			on:mousedown={handleButtonPress}
+			on:mousedown={onMouseDown}
+			on:mouseup={onMouseUp}
 		>
 			<!-- Button glow effect -->
 			<!-- svelte-ignore element_invalid_self_closing_tag -->
@@ -392,7 +457,7 @@
 				/>
 			{:else}
 				<span
-					class="relative z-10 text-white drop-shadow-lg text-8xl"
+					class="relative z-10 text-8xl text-white drop-shadow-lg"
 					style="filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3)); line-height: 1"
 				>
 					{currentMode.icon}
@@ -403,24 +468,24 @@
 
 	<!-- App title -->
 	<div class="mt-12 text-center">
-		<h1 class="text-4xl font-light text-white mb-2 drop-shadow-md">OmniSense</h1>
-		<p class="text-white text-lg opacity-80 font-light">
+		<h1 class="mb-2 text-4xl font-light text-white drop-shadow-md">OmniSense</h1>
+		<p class="text-lg font-light text-white opacity-80">
 			{currentMode.name}
 		</p>
 	</div>
 
 	<!-- Debug controls -->
-	<div class="absolute bottom-8 left-1/2 transform -translate-x-1/2">
-		<div class="bg-black bg-opacity-20 backdrop-blur-sm rounded-2xl p-4">
-			<p class="text-white text-sm mb-3 text-center opacity-80">Debug Controls</p>
-			<div class="flex flex-wrap gap-2 justify-center max-w-md">
+	<div class="absolute bottom-8 left-1/2 -translate-x-1/2 transform">
+		<div class="bg-opacity-20 rounded-2xl bg-black p-4 backdrop-blur-sm">
+			<p class="mb-3 text-center text-sm text-white opacity-80">Debug Controls</p>
+			<div class="flex max-w-md flex-wrap justify-center gap-2">
 				{#each Object.entries(emotionalModes) as [mode, config]}
 					<button
 						on:click={() => (emotionalMode = mode as EmotionalMode)}
-						class="px-2 py-1 rounded-lg text-xs font-medium transition-all duration-200
+						class="rounded-lg px-2 py-1 text-xs font-medium transition-all duration-200
                    {emotionalMode === mode
-							? 'bg-white text-black shadow-lg scale-105'
-							: 'bg-white bg-opacity-20 text-white hover:bg-opacity-30'}"
+							? 'scale-105 bg-white text-black shadow-lg'
+							: 'bg-opacity-20 hover:bg-opacity-30 bg-white text-white'}"
 					>
 						{config.name.split('/')[0]}
 					</button>
@@ -429,3 +494,4 @@
 		</div>
 	</div>
 </div>
+<audio bind:this={audioElement} />

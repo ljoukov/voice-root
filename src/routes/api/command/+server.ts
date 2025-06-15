@@ -33,7 +33,6 @@ async function callOpenAI(prompt: string): Promise<string> {
 			}
 		]
 	});
-
 	return response.output_text;
 }
 
@@ -200,18 +199,7 @@ export const POST = (async ({ request }) => {
 		const parsed = transcriptionSchema.parse(transcriptionResult);
 		const { text } = parsed;
 		console.log('Received: ', text);
-
-		const llmResponse = await callLLM(text);
-		console.log('LLM Response:', llmResponse);
-
-		const audioBuffer = await minimaxTTS(llmResponse);
-		console.log('Audio response:', audioBuffer.byteLength);
-		return new Response(audioBuffer, {
-			headers: {
-				'Content-Type': 'audio/mp3',
-				'Content-Length': audioBuffer.byteLength.toString()
-			}
-		});
+		return json({ status: 'ok' });
 	} catch (error) {
 		console.error('Error during transcription:', error);
 		return json(
