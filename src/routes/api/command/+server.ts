@@ -9,13 +9,38 @@ import {
 } from '$env/static/private';
 import z from 'zod';
 import OpenAI from 'openai';
-import { systemPrompt } from './systemPrompt';
+
+const emotionalModels = [
+	'listening',
+	'thinking',
+	'explaining',
+	'encouraging',
+	'patient',
+	'focused',
+	'curious',
+	'celebrating',
+	'clarifying',
+	'summarizing'
+] as const;
 
 type Message = {
-	role: 'user' | 'assistant';
+	role: 'user' | 'assistant' | 'system';
 	content: string;
 };
-const history: Message[] = [];
+const history: Message[] = [
+	{
+		role: 'system',
+		content: `\
+When responding ALWAYS make the first line reflect the most appropriate mode for your response,
+one of ${emotionalModels.join(', ')}.
+
+<OUTPUT_FORMAT>
+MODE: <mode>
+
+response text
+</OUTPUT_FORMAT>`
+	}
+];
 
 const openaiClient = new OpenAI({
 	apiKey: OPENAI_API_KEY
@@ -30,7 +55,8 @@ async function callLLM(prompt: string): Promise<string> {
 		model: 'gpt-4.1',
 		store: true
 	});
-	const responseText = completion.choices[0].message.content;
+	const { message } = completion.choices[0];
+	const responseText = message.content;
 	if (!responseText) {
 		return 'Sorry, there is  server error';
 	}
@@ -47,6 +73,20 @@ async function callTTS(text: string) {
 	});
 	return await mp3.arrayBuffer();
 }
+
+const EmotionalModeSchema = z.enum([
+	'listening',
+	'thinking',
+	'explaining',
+	'encouraging',
+	'patient',
+	'focused',
+	'curious',
+	'celebrating',
+	'clarifying',
+	'summarizing'
+]);
+type EmotionalMode = z.infer<typeof EmotionalModeSchema>;
 
 export const POST = (async ({ request }) => {
 	const formData = await request.formData();
@@ -90,10 +130,16 @@ export const POST = (async ({ request }) => {
 		if (prompt.length === 0) {
 			return json({ status: 'error', message: 'empty prompt' });
 		}
-		const responseText = await callLLM(prompt);
-		const audioBuffer = await callTTS(responseText);
+		const llmResponseText = await callLLM(prompt);
+		const match = llmResponseText.match(/^MODE:\s*(\w+)\s*\n\n([\s\S]*)/);
+		if (!match) {
+			return json({ status: 'error', message: 'Invalid response format from LLM' });
+		}
+		const mode = match[1] as EmotionalMode;
+		const speechText = match[2];
+		const audioBuffer = await callTTS(speechText);
 		const audioBase64 = Buffer.from(audioBuffer).toString('base64');
-		return json({ status: 'ok', audioBase64 });
+		return json({ status: 'ok', audioBase64, mode });
 	} catch (error) {
 		console.error('Error during transcription:', error);
 		return json(

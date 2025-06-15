@@ -2,17 +2,19 @@
 	import { z } from 'zod';
 	import { Mic } from 'lucide-svelte';
 
-	type EmotionalMode =
-		| 'listening'
-		| 'thinking'
-		| 'explaining'
-		| 'encouraging'
-		| 'patient'
-		| 'focused'
-		| 'curious'
-		| 'celebrating'
-		| 'clarifying'
-		| 'summarizing';
+	const emotionalModeSchema = z.enum([
+		'listening',
+		'thinking',
+		'explaining',
+		'encouraging',
+		'patient',
+		'focused',
+		'curious',
+		'celebrating',
+		'clarifying',
+		'summarizing'
+	]);
+	type EmotionalMode = z.infer<typeof emotionalModeSchema>;
 	type Animation =
 		| 'breathe'
 		| 'ripple'
@@ -165,8 +167,17 @@
 	let audioChunks: Blob[] = [];
 	let isRecording = false;
 	let audioElement: HTMLAudioElement;
+	let audioUrl: string | undefined;
 
 	async function startRecording() {
+		if (audioElement && !audioElement.paused) {
+			audioElement.pause();
+			audioElement.currentTime = 0;
+			if (audioUrl) {
+				URL.revokeObjectURL(audioUrl);
+			}
+		}
+
 		const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 		mediaRecorder = new MediaRecorder(stream);
 		audioChunks = [];
@@ -196,7 +207,8 @@
 				}),
 				z.object({
 					status: z.literal('ok'),
-					audioBase64: z.string()
+					audioBase64: z.string(),
+					mode: emotionalModeSchema
 				})
 			]);
 
@@ -206,12 +218,14 @@
 				return;
 			}
 			if (parsed.data.status === 'ok') {
+				emotionalMode = parsed.data.mode;
+				console.log({ emotionalMode });
 				const audioBase64 = parsed.data.audioBase64;
 				const arrayBuffer = Uint8Array.from(atob(audioBase64), (c) => c.charCodeAt(0)).buffer;
 				// Create a blob from the array buffer
 				const responseBlob = new Blob([arrayBuffer], { type: 'audio/mp3' });
 				// Create an object URL for the blob
-				const audioUrl = URL.createObjectURL(responseBlob);
+				audioUrl = URL.createObjectURL(responseBlob);
 
 				// Set the audio source and play
 				audioElement.src = audioUrl;
@@ -507,8 +521,8 @@
 						on:click={() => (emotionalMode = mode as EmotionalMode)}
 						class="rounded-lg px-2 py-1 text-xs font-medium transition-all duration-200
                    {emotionalMode === mode
-							? 'scale-105 bg-white text-black shadow-lg'
-							: 'bg-opacity-20 hover:bg-opacity-30 bg-white text-white'}"
+							? 'scale-105 bg-white text-blue-700 shadow-lg'
+							: 'bg-opacity-20 hover:bg-opacity-30 bg-white text-black'}"
 					>
 						{config.name.split('/')[0]}
 					</button>
