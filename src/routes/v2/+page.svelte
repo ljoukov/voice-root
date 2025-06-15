@@ -1,0 +1,431 @@
+<script lang="ts">
+	import { Mic } from 'lucide-svelte';
+
+	type EmotionalMode =
+		| 'listening'
+		| 'thinking'
+		| 'explaining'
+		| 'encouraging'
+		| 'patient'
+		| 'focused'
+		| 'curious'
+		| 'celebrating'
+		| 'clarifying'
+		| 'summarizing';
+	type Animation =
+		| 'breathe'
+		| 'ripple'
+		| 'stable'
+		| 'shimmer'
+		| 'gentle'
+		| 'beam'
+		| 'bubble'
+		| 'burst'
+		| 'fade'
+		| 'sunset';
+
+	// Ensure all emotionalModes use a valid Animation
+	type EmotionalModeConfig = {
+		name: string;
+		background: string;
+		buttonColor: string;
+		pulseColor: string;
+		animation: Animation;
+		icon: string;
+		showMic: boolean;
+	};
+	let emotionalMode: EmotionalMode = 'listening';
+	let isPressed = false;
+
+	// Emotional mode configurations
+	const emotionalModes: Record<EmotionalMode, EmotionalModeConfig> = {
+		listening: {
+			name: 'Listening/Ready',
+			background: 'linear-gradient(135deg, #87ceeb 0%, #f0f8ff 50%, #e6f3ff 100%)',
+			buttonColor: '#87ceeb',
+			pulseColor: '#b0e0e6',
+			animation: 'breathe',
+			icon: '🎧',
+			showMic: false
+		},
+		thinking: {
+			name: 'Thinking/Processing',
+			background: 'linear-gradient(135deg, #1e3a8a 0%, #3730a3 50%, #6366f1 100%)',
+			buttonColor: '#6366f1',
+			pulseColor: '#8b5cf6',
+			animation: 'ripple',
+			icon: '🧠',
+			showMic: false
+		},
+		explaining: {
+			name: 'Explaining/Teaching',
+			background: 'linear-gradient(135deg, #0f766e 0%, #14b8a6 50%, #2dd4bf 100%)',
+			buttonColor: '#14b8a6',
+			pulseColor: '#5eead4',
+			animation: 'stable',
+			icon: '📚',
+			showMic: false
+		},
+		encouraging: {
+			name: 'Encouraging/Affirming',
+			background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #fb923c 100%)',
+			buttonColor: '#fbbf24',
+			pulseColor: '#fde047',
+			animation: 'shimmer',
+			icon: '☀️',
+			showMic: false
+		},
+		patient: {
+			name: 'Patient/Supportive',
+			background: 'linear-gradient(135deg, #c084fc 0%, #ddd6fe 50%, #e0e7ff 100%)',
+			buttonColor: '#c084fc',
+			pulseColor: '#ddd6fe',
+			animation: 'gentle',
+			icon: '🤗',
+			showMic: false
+		},
+		focused: {
+			name: 'Focused/Deep Dive',
+			background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #f8fafc 100%)',
+			buttonColor: '#3b82f6',
+			pulseColor: '#93c5fd',
+			animation: 'beam',
+			icon: '🔍',
+			showMic: false
+		},
+		curious: {
+			name: 'Curious/Ideation',
+			background: 'linear-gradient(135deg, #fb7185 0%, #f97316 50%, #fbbf24 100%)',
+			buttonColor: '#fb7185',
+			pulseColor: '#fda4af',
+			animation: 'bubble',
+			icon: '💡',
+			showMic: false
+		},
+		celebrating: {
+			name: 'Celebrating/Success',
+			background: 'linear-gradient(135deg, #fbbf24 0%, #10b981 50%, #059669 100%)',
+			buttonColor: '#10b981',
+			pulseColor: '#34d399',
+			animation: 'burst',
+			icon: '🎉',
+			showMic: false
+		},
+		clarifying: {
+			name: 'Clarifying/Apologetic',
+			background: 'linear-gradient(135deg, #64748b 0%, #94a3b8 50%, #cbd5e1 100%)',
+			buttonColor: '#64748b',
+			pulseColor: '#94a3b8',
+			animation: 'fade',
+			icon: '🙏',
+			showMic: false
+		},
+		summarizing: {
+			name: 'Summarizing/Winding Down',
+			background: 'linear-gradient(135deg, #fb7185 0%, #f97316 50%, #8b5cf6 100%)',
+			buttonColor: '#f97316',
+			pulseColor: '#fb923c',
+			animation: 'sunset',
+			icon: '📋',
+			showMic: false
+		}
+	};
+
+	$: currentMode = emotionalModes[emotionalMode];
+
+	const animationDurations = {
+		breathe: '4s',
+		ripple: '3s',
+		stable: '2s',
+		shimmer: '2s',
+		gentle: '5s',
+		beam: '2.5s',
+		bubble: '2.5s',
+		burst: '1.5s',
+		fade: '4s',
+		sunset: '6s'
+	};
+
+	$: animationStyle = `animation: ${currentMode.animation} ${animationDurations[currentMode.animation]} ease-in-out infinite`;
+
+	function handleButtonPress() {
+		isPressed = true;
+		setTimeout(() => (isPressed = false), 150);
+	}
+</script>
+
+<svelte:head>
+	<style>
+		@keyframes breathe {
+			0%,
+			100% {
+				transform: scale(1);
+				opacity: 0.8;
+			}
+			50% {
+				transform: scale(1.05);
+				opacity: 1;
+			}
+		}
+
+		@keyframes ripple {
+			0% {
+				transform: scale(1);
+			}
+			50% {
+				transform: scale(1.1);
+			}
+			100% {
+				transform: scale(1);
+			}
+		}
+
+		@keyframes stable {
+			0%,
+			100% {
+				transform: scale(1);
+				opacity: 0.95;
+			}
+			50% {
+				transform: scale(1.02);
+				opacity: 1;
+			}
+		}
+
+		@keyframes shimmer {
+			0% {
+				transform: scale(1);
+				opacity: 0.8;
+			}
+			25% {
+				transform: scale(1.15);
+				opacity: 1;
+			}
+			50% {
+				transform: scale(1.1);
+				opacity: 0.9;
+			}
+			75% {
+				transform: scale(1.15);
+				opacity: 1;
+			}
+			100% {
+				transform: scale(1);
+				opacity: 0.8;
+			}
+		}
+
+		@keyframes gentle {
+			0%,
+			100% {
+				transform: scale(0.95);
+				opacity: 0.7;
+			}
+			50% {
+				transform: scale(1);
+				opacity: 0.9;
+			}
+		}
+
+		@keyframes beam {
+			0%,
+			100% {
+				transform: scale(1) scaleX(1);
+			}
+			50% {
+				transform: scale(1.05) scaleX(1.1);
+			}
+		}
+
+		@keyframes bubble {
+			0% {
+				transform: scale(1) translateY(0);
+			}
+			25% {
+				transform: scale(1.1) translateY(-5px);
+			}
+			50% {
+				transform: scale(1.05) translateY(2px);
+			}
+			75% {
+				transform: scale(1.15) translateY(-3px);
+			}
+			100% {
+				transform: scale(1) translateY(0);
+			}
+		}
+
+		@keyframes burst {
+			0% {
+				transform: scale(1);
+			}
+			25% {
+				transform: scale(1.3);
+			}
+			50% {
+				transform: scale(1.1);
+			}
+			75% {
+				transform: scale(1.4);
+			}
+			100% {
+				transform: scale(1);
+			}
+		}
+
+		@keyframes fade {
+			0%,
+			100% {
+				transform: scale(0.9);
+				opacity: 0.6;
+			}
+			50% {
+				transform: scale(0.95);
+				opacity: 0.8;
+			}
+		}
+
+		@keyframes sunset {
+			0% {
+				transform: scale(1) rotateZ(0deg);
+				opacity: 1;
+			}
+			50% {
+				transform: scale(1.05) rotateZ(1deg);
+				opacity: 0.8;
+			}
+			100% {
+				transform: scale(1) rotateZ(0deg);
+				opacity: 1;
+			}
+		}
+
+		@keyframes ponder {
+			0%,
+			100% {
+				transform: translateX(0) scale(1);
+			}
+			25% {
+				transform: translateX(-10px) scale(0.95);
+			}
+			75% {
+				transform: translateX(10px) scale(0.95);
+			}
+		}
+
+		@keyframes backgroundFlow {
+			0%,
+			100% {
+				background-position: 0% 50%;
+			}
+			50% {
+				background-position: 100% 50%;
+			}
+		}
+
+		@keyframes pulseRipple {
+			0% {
+				transform: scale(1);
+				opacity: 0.8;
+			}
+			100% {
+				transform: scale(2.5);
+				opacity: 0;
+			}
+		}
+	</style>
+</svelte:head>
+
+<div
+	class="min-h-screen w-full flex flex-col items-center justify-center relative overflow-hidden transition-all duration-1000 ease-in-out"
+	style="background: {currentMode.background}; background-size: 200% 200%; animation: backgroundFlow 8s ease-in-out infinite"
+>
+	<!-- Ambient background particles -->
+	<div class="absolute inset-0 overflow-hidden pointer-events-none">
+		{#each Array(20) as _, i}
+			<div
+				class="absolute rounded-full opacity-20"
+				style="left: {Math.random() * 100}%; top: {Math.random() * 100}%; 
+               width: {Math.random() * 4 + 2}px; height: {Math.random() * 4 + 2}px;
+               background-color: {currentMode.pulseColor};
+               animation: breathe {Math.random() * 3 + 2}s ease-in-out infinite {Math.random() *
+					2}s"
+			/>
+		{/each}
+	</div>
+
+	<!-- Main voice button -->
+	<div class="relative flex items-center justify-center">
+		<!-- Pulse rings -->
+		{#each Array(3) as _, i}
+			<div
+				class="absolute rounded-full border-2 pointer-events-none"
+				style="width: {280 + i * 40}px; height: {280 + i * 40}px;
+               border-color: {currentMode.pulseColor}; opacity: {0.3 - i * 0.1};
+               animation: pulseRipple {3 + i}s ease-out infinite {i * 0.5}s"
+			/>
+		{/each}
+
+		<!-- Main button -->
+		<button
+			class="relative w-64 h-64 rounded-full shadow-2xl transition-all duration-300 ease-out transform
+             {isPressed ? 'scale-95' : 'scale-100'} hover:scale-105 active:scale-95
+             focus:outline-none focus:ring-4 focus:ring-white focus:ring-opacity-50"
+			style="background-color: {currentMode.buttonColor};
+             box-shadow: 0 20px 40px rgba(0,0,0,0.2), 0 0 40px {currentMode.pulseColor}40;
+             {animationStyle}"
+			on:mousedown={handleButtonPress}
+		>
+			<!-- Button glow effect -->
+			<!-- svelte-ignore element_invalid_self_closing_tag -->
+			<div
+				class="absolute inset-0 rounded-full opacity-30"
+				style="background: radial-gradient(circle, {currentMode.pulseColor} 0%, transparent 70%)"
+			/>
+
+			<!-- Icon display -->
+			{#if currentMode.showMic}
+				<Mic
+					size={80}
+					class="relative z-10 text-white drop-shadow-lg"
+					style="filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3))"
+				/>
+			{:else}
+				<span
+					class="relative z-10 text-white drop-shadow-lg text-8xl"
+					style="filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3)); line-height: 1"
+				>
+					{currentMode.icon}
+				</span>
+			{/if}
+		</button>
+	</div>
+
+	<!-- App title -->
+	<div class="mt-12 text-center">
+		<h1 class="text-4xl font-light text-white mb-2 drop-shadow-md">OmniSense</h1>
+		<p class="text-white text-lg opacity-80 font-light">
+			{currentMode.name}
+		</p>
+	</div>
+
+	<!-- Debug controls -->
+	<div class="absolute bottom-8 left-1/2 transform -translate-x-1/2">
+		<div class="bg-black bg-opacity-20 backdrop-blur-sm rounded-2xl p-4">
+			<p class="text-white text-sm mb-3 text-center opacity-80">Debug Controls</p>
+			<div class="flex flex-wrap gap-2 justify-center max-w-md">
+				{#each Object.entries(emotionalModes) as [mode, config]}
+					<button
+						on:click={() => (emotionalMode = mode as EmotionalMode)}
+						class="px-2 py-1 rounded-lg text-xs font-medium transition-all duration-200
+                   {emotionalMode === mode
+							? 'bg-white text-black shadow-lg scale-105'
+							: 'bg-white bg-opacity-20 text-white hover:bg-opacity-30'}"
+					>
+						{config.name.split('/')[0]}
+					</button>
+				{/each}
+			</div>
+		</div>
+	</div>
+</div>
